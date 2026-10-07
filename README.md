@@ -150,13 +150,6 @@ de celda.
 
 ## Mañas (troubleshooting operativo)
 
-### Arreglables con algo de trabajo (no se implementaron por tiempo)
-- **Deriva de color por iluminación**: se reduce con una carcasa cerrada alrededor de la cámara
-  con LED propio, aislada de luz ambiente.
-- **Undervoltage de la Raspberry Pi** (cámara + Dobot compitiendo por energía/ancho de banda
-  USB): se resuelve con una fuente más robusta o un hub USB con alimentación propia para la
-  cámara.
-
 ### Por diseño, no hay que "arreglarlas"
 - El watchdog de 30 s de `FC130` y la recuperación de ~16-20 s de `systemd` tras un Stop/Reset
   son capas de seguridad intencionales.
