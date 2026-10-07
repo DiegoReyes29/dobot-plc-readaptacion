@@ -133,16 +133,70 @@ sudo systemctl enable --now coordinador.service
 
 La detección de pieza combina **forma** (Hough Circle Transform sobre un ROI recortado) y
 **color** (distancia HSV promedio dentro de una máscara anular, más porcentaje de píxeles en un
-rango de color de marca de defecto). Ver `COLOR_REFS_HSV` en `src/coordinador.py` — es una
-**lista** de referencias, no una sola, porque la luz ambiente cambia a lo largo del día y una
-sola referencia fija no es suficiente. Procedimiento recomendado para recalibrar:
+rango de color de marca de defecto). Esta sección explica cómo se obtiene cada número, para que
+se pueda repetir con una pieza, cámara o iluminación distintas.
 
-1. Correr un script de monitoreo de solo lectura que guarde fotos cada vez que `Part_AV` se
-   activa, sin tocar el PLC ni el Dobot.
-2. Medir el color SIEMPRE con el mismo método de detección por círculo que usa el sistema real
-   (nunca con una caja de coordenadas fija — el resultado no es representativo si la pieza no
-   cae exactamente en el mismo píxel que el día de la calibración anterior).
-3. Agregar la nueva referencia a la lista en vez de reemplazar las anteriores.
+### 1. Región de interés (ROI) y detección de forma
+
+`RX, RY, RW, RH` en `src/coordinador.py` recortan la zona de la imagen donde cae la pieza en el
+punto de `PICK` (no se analiza la imagen completa: el fondo metálico de la celda genera decenas
+de contornos falsos). Para obtenerlos: tomar una foto de referencia con la pieza en `PICK`, y
+recortar a mano (en cualquier editor de imágenes) hasta que el recuadro contenga solo la pieza
+con un margen razonable — esos píxeles de esquina son `RX, RY, RW, RH`.
+
+Dentro de ese recorte, `cv2.HoughCircles` busca el círculo del collar de la pieza:
+
+```python
+circles = cv2.HoughCircles(
+    gray, cv2.HOUGH_GRADIENT, dp=1.2, minDist=100,
+    param1=80, param2=40, minRadius=30, maxRadius=68
+)
+```
+
+`minRadius`/`maxRadius` se ajustan a ojo: se corre sobre varias fotos de referencia y se achica o
+agranda el rango hasta que detecte consistentemente el círculo real de la pieza y no, por
+ejemplo, un círculo falso sobre un objeto vecino (en este proyecto pasó con el brazo de
+Distributing de fondo — hubo que bajar `maxRadius` para dejar de engancharlo).
+
+### 2. Referencia de color
+
+Una vez detectado el círculo (centro `x,y` y radio `r`), se construye una **máscara anular**
+(entre 45&nbsp;% y 90&nbsp;% del radio) para medir el color: esto evita el agujero central de la
+pieza y el borde exterior, donde el enfoque es peor. El color de referencia es el promedio HSV
+de los píxeles dentro de esa máscara, en una foto de una pieza buena conocida — **nunca
+muestrear con una caja de coordenadas fija**, porque si la pieza no cae exactamente en el mismo
+píxel que el día de la calibración anterior, el resultado no es representativo; siempre hay que
+re-detectar el círculo primero y medir dentro de esa máscara.
+
+`COLOR_REFS_HSV` es una **lista** de referencias, no una sola, porque la luz ambiente cambia a
+lo largo del día (se verificó una deriva real de Saturación de ~34 a ~20 entre la mañana y el
+atardecer en una misma sesión) y una sola referencia fija no alcanza. Un valor se acepta si
+coincide con **cualquiera** de las referencias de la lista, dentro de `TOLERANCIA_HSV`.
+
+### 3. Criterio de marca de defecto (segundo criterio, independiente del color promedio)
+
+El promedio de color de toda la pieza no detecta bien defectos chicos o localizados (una marca
+pequeña mueve poco el promedio). Por eso hay un segundo criterio, en paralelo (unido por OR, no
+reemplaza al primero): el **porcentaje de píxeles dentro de la máscara anular que caen en un
+rango de color de defecto** (`AZUL_LOWER`/`AZUL_UPPER`, calibrado para marcador azul — ajustar el
+rango HSV al color de defecto real que se quiera detectar). Si ese porcentaje supera
+`UMBRAL_PCT_AZUL`, se rechaza, sin importar qué tan cerca esté el promedio general del color de
+referencia.
+
+### 4. Procedimiento para recalibrar
+
+1. Correr un script de monitoreo de solo lectura (ej. `monitor_fotos_pick.py`, no incluido en
+   este repo) que guarde una foto cada vez que `Part_AV` se activa, **sin tocar el PLC ni el
+   Dobot** — para juntar muestras reales sin arriesgar producción.
+2. Juntar fotos de piezas buenas y de cada tipo de defecto que se quiera detectar.
+3. Medir el color de cada una con el mismo método de detección por círculo + máscara anular que
+   usa `evaluar_pieza()` en `src/coordinador.py` (nunca a mano con una caja fija).
+4. Si las piezas buenas caen en un color distinto a las referencias existentes, **agregar** una
+   referencia nueva a la lista (no reemplazar las anteriores — pueden seguir siendo válidas bajo
+   otra luz).
+5. Validar el criterio completo (color promedio OR % de defecto) contra TODAS las muestras
+   conocidas, buenas y malas, antes de desplegar — un cambio de calibración que no se valida así
+   puede arreglar un falso positivo y crear uno nuevo en otro lado.
 
 Las coordenadas `PICK`, `PLACE`, `DESCARTE`, `WAYPOINT_*` y `HOME` son específicas de la posición
 física exacta del montaje — deben recalibrarse si el Dobot se desmonta, se golpea, o se cambia
