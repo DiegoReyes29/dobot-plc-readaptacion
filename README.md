@@ -211,6 +211,13 @@ de celda.
   `coordinador.service` está corriendo — un puerto serial solo admite un dueño a la vez; causa
   desincronización y lecturas de pose corruptas. Para diagnosticar, agregar prints dentro del
   código que ya está corriendo, no un script paralelo.
+- **La cámara debe estar conectada antes de arrancar `coordinador.py`** (o antes de reiniciar
+  `coordinador.service`) — la cámara se abre una única vez al inicio del script y no se
+  redetecta en caliente durante la sesión. Si se conecta después de que el servicio ya está
+  corriendo, el sistema sigue funcionando pero sin visión (todas las piezas se tratan como
+  aprobadas) hasta el siguiente `sudo systemctl restart coordinador.service`. El symlink fijo
+  `/dev/camara_dobot` (regla de udev por `idVendor:idProduct`, no por índice) sí es independiente
+  del puerto USB usado — confirmado conectándola en un puerto distinto al habitual.
 
 ### Limitación de fondo (librería/hardware, no hay fix de raíz)
 - **Bug de desincronización serial de `pydobot`** (lecturas de pose corruptas, errores
