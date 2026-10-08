@@ -350,11 +350,16 @@ def pick_and_place(device, plc, cap):
         _t = ahora
 
     # Vision: se evalua con el brazo todavia en HOME, antes de moverse, para
-    # no estorbar la vista de la camara sobre la zona de PICK. Pequeña
-    # espera para que la pieza/brazo de Distributing terminen de asentarse
-    # antes de capturar - sin esto, el desenfoque por movimiento distorsiona
-    # el color medido (hallazgo 2026-10-06).
-    time.sleep(0.6)
+    # no estorbar la vista de la camara sobre la zona de PICK. Espera para
+    # que la pieza termine de asentarse antes de capturar - sin esto, el
+    # desenfoque por movimiento distorsiona el color medido (hallazgo
+    # 2026-10-06). Subido de 0.6s a 1.9s el 2026-10-08: con alimentacion
+    # manual (no la banda de Distributing) la pieza tarda hasta ~1.9s en
+    # llegar y asentarse en el punto de recogida, confirmado con fotos de
+    # diagnostico con marca de tiempo - con 0.6s la camara disparaba sobre
+    # el cuadro todavia vacio, dando falsos rechazos por "color fuera de
+    # rango" (media color de la maquinaria de fondo, no de la pieza).
+    time.sleep(1.9)
     resultado_vision = evaluar_pieza_con_reintento(cap)
     print(f"  [Vision] {resultado_vision}")
     marca("vision")
