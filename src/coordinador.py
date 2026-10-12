@@ -377,7 +377,7 @@ def evaluar_pieza_con_reintento(cap, intentos=3, espera=0.3):
     return ultimo
 
 
-def _evaluar_pieza_estable_interno(cap, intentos_max=20, espera=0.2, tolerancia_color=10):
+def _evaluar_pieza_estable_interno(cap, intentos_max=10, espera=0.2, tolerancia_color=10):
     """2026-10-09: en vez de confiar en un tiempo fijo de espera antes de
     la unica foto real (fallaba de forma intermitente: a veces la pieza
     todavia no habia llegado, y la camara media el color de la maquinaria
@@ -394,11 +394,16 @@ def _evaluar_pieza_estable_interno(cap, intentos_max=20, espera=0.2, tolerancia_
     2. Ademas, si dos lecturas seguidas YA pasaron el filtro de brillo y
        tienen un color casi identico entre si (diferencia de HSV menor a
        tolerancia_color), se confirma antes del limite de intentos -- para
-       no esperar los 20 intentos completos si la pieza ya se ve clara y
+       no esperar los 10 intentos completos si la pieza ya se ve clara y
        quieta desde temprano.
-    Limite de 20 intentos x 0.2s = 4s como tope de seguridad, para no
-    esperar para siempre si algo sale mal (ej. pieza fuera del encuadre
-    todo ese tiempo)."""
+    Limite de 10 intentos x 0.2s = 2s como tope de seguridad (bajado de 20
+    el 2026-10-12: 65 de 68 estabilizaciones historicas se lograron en 7
+    lecturas o menos, y los pocos casos que necesitan mas igual se
+    clasifican con la ultima lectura si tenia buen brillo, solo pierden
+    la doble confirmacion). Para no esperar para siempre si algo sale mal
+    (ej. pieza fuera del encuadre todo ese tiempo), y para que una pieza
+    negra o plateada (que nunca pasa el filtro de brillo, ver
+    VALOR_MINIMO_PIEZA_REAL) tarde ~2s en descartarse en vez de ~4s."""
     anterior = None
     ultimo = {"hay_forma": False, "aprobada": False, "motivo": "sin circulo"}
     ultimo_frame = None
@@ -439,7 +444,7 @@ _evaluar_pieza_estable_ultimo_hsv = None
 _evaluar_pieza_estable_repeticiones = 0
 
 
-def evaluar_pieza_estable(cap, intentos_max=20, espera=0.2, tolerancia_color=10):
+def evaluar_pieza_estable(cap, intentos_max=10, espera=0.2, tolerancia_color=10):
     global _evaluar_pieza_estable_ultimo_hsv, _evaluar_pieza_estable_repeticiones
 
     resultado = _evaluar_pieza_estable_interno(cap, intentos_max, espera, tolerancia_color)
