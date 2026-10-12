@@ -86,12 +86,43 @@ COLOR_REFS_HSV = [
     np.array([78.5, 34.9, 220.5]),  # calibrado 2026-10-07, resolucion 800x600 + luz distinta
     np.array([78.3, 20.1, 210.6]),  # calibrado 2026-10-07 ~15:50, luz de atardecer (saturacion mas baja)
 ]
-TOLERANCIA_HSV = np.array([20, 25, 40])
+# Saturacion subida de 25 a 35 el 2026-10-09: varios falsos positivos
+# documentados (piezas buenas reales, confirmadas por foto) con la
+# diferencia de Saturacion apenas por encima de 25 (25.3, 26.5, 27.6) por
+# deriva de iluminacion durante el dia. 35 deja margen comodo sobre esos
+# casos reales, y sigue muy por debajo de las diferencias de Saturacion de
+# defectos de color genuinos medidas hasta ahora (40 o mas).
+TOLERANCIA_HSV = np.array([20, 35, 40])
 # Rango de azul tipico de marcador, usado para detectar marcas de defecto
 # (grandes o chicas) que el promedio de color por si solo no distingue bien.
 AZUL_LOWER = np.array([90, 60, 40])
 AZUL_UPPER = np.array([140, 255, 255])
 UMBRAL_PCT_AZUL = 2.0  # % de pixeles azules dentro del aro para rechazar
+
+# 2026-10-09: todas las lecturas "basura" (maquinaria de fondo, brazo de
+# Distributing en movimiento, pieza todavia no asentada) medidas en dos
+# dias de pruebas dieron Valor (brillo, canal V de HSV) entre 25 y 57.
+# Todas las lecturas de una pieza real (buena o mala, pero genuinamente
+# fotografiada) dieron Valor entre 207 y 232 - nunca se solapan. Se usa
+# 100 como umbral de seguridad, bien en el medio de ese salto, para
+# descartar lecturas oscuras de fondo sin depender de timing ni de que
+# se repita una lectura identica dos veces seguidas.
+VALOR_MINIMO_PIEZA_REAL = 100
+
+# 2026-10-12: tras un Stop/Reset/Em_Stop, systemd reinicia coordinador.py
+# casi al instante (Restart=always) y a veces el dispositivo de camara
+# todavia no termino de liberarse del proceso anterior - GStreamer tira
+# warnings ("Could not read from resource", "unable to start pipeline")
+# pero cap.isOpened() igual da True, y la camara queda sirviendo el mismo
+# frame congelado (el ultimo que alcanzo a ver) en vez de refrescar.
+# Sintoma confirmado en vivo: 4 ciclos seguidos con piezas fisicas
+# distintas (varias blancas de por medio) dieron la lectura de color casi
+# identica de una tapa roja que ya no estaba ahi. Si una lectura con
+# pieza detectada se repite casi igual por varios ciclos SEGUIDOS (no
+# intentos dentro del mismo ciclo, sino entre ciclos distintos), se asume
+# camara congelada y se reabre sola.
+CONGELAMIENTO_TOLERANCIA_HSV = 1.5
+CONGELAMIENTO_CICLOS_SEGUIDOS = 3
 
 
 def get_pose(device):
@@ -340,6 +371,107 @@ def evaluar_pieza_con_reintento(cap, intentos=3, espera=0.3):
     return ultimo
 
 
+def _evaluar_pieza_estable_interno(cap, intentos_max=20, espera=0.2, tolerancia_color=10):
+    """2026-10-09: en vez de confiar en un tiempo fijo de espera antes de
+    la unica foto real (fallaba de forma intermitente: a veces la pieza
+    todavia no habia llegado, y la camara media el color de la maquinaria
+    de fondo en vez de la pieza, dando rechazos falsos por "color fuera de
+    rango"), esta funcion reintenta hasta conseguir una lectura que parezca
+    una pieza real de verdad, en vez de aceptar la primera lectura que
+    salga. Dos filtros, en orden:
+    1. Brillo (Valor de HSV) >= VALOR_MINIMO_PIEZA_REAL -- el filtro mas
+       confiable: las lecturas de fondo/maquinaria siempre dieron <60 de
+       brillo, las de pieza real siempre >200, sin solape (ver constante).
+       Se probo primero exigir dos lecturas identicas seguidas, pero un
+       fondo quieto (nada moviendose) puede repetirse igual de estable
+       que una pieza real, asi que ese criterio solo no alcanza.
+    2. Ademas, si dos lecturas seguidas YA pasaron el filtro de brillo y
+       tienen un color casi identico entre si (diferencia de HSV menor a
+       tolerancia_color), se confirma antes del limite de intentos -- para
+       no esperar los 20 intentos completos si la pieza ya se ve clara y
+       quieta desde temprano.
+    Limite de 20 intentos x 0.2s = 4s como tope de seguridad, para no
+    esperar para siempre si algo sale mal (ej. pieza fuera del encuadre
+    todo ese tiempo)."""
+    anterior = None
+    ultimo = {"hay_forma": False, "aprobada": False, "motivo": "sin circulo"}
+    ultimo_frame = None
+    for intento in range(intentos_max):
+        frame = tomar_foto(cap)
+        if frame is None:
+            time.sleep(espera)
+            continue
+        ultimo_frame = frame
+        ultimo = evaluar_pieza(frame)
+        brillo_ok = ultimo["hay_forma"] and ultimo["color_hsv"][2] >= VALOR_MINIMO_PIEZA_REAL
+        if brillo_ok:
+            if anterior is not None and anterior.get("color_hsv"):
+                diff = np.abs(np.array(ultimo["color_hsv"]) - np.array(anterior["color_hsv"]))
+                if np.all(diff < tolerancia_color):
+                    guardar_foto_evaluada(frame, ultimo)
+                    print(f"  [vision estable tras {intento + 1} lecturas]")
+                    return ultimo
+            anterior = ultimo
+        else:
+            anterior = None  # un fondo oscuro rompe la racha de estabilidad
+        time.sleep(espera)
+    # Se acabaron los intentos. Si la ultima lectura al menos paso el
+    # filtro de brillo (parece una pieza real, aunque no se confirmo con
+    # una segunda lectura identica), se usa igual; si nunca paso el
+    # filtro de brillo, se trata como "sin pieza" (comportamiento viejo).
+    if ultimo["hay_forma"] and ultimo["color_hsv"][2] < VALOR_MINIMO_PIEZA_REAL:
+        ultimo = {"hay_forma": False, "aprobada": False, "motivo": "sin circulo (brillo bajo, probable fondo)"}
+    guardar_foto_evaluada(ultimo_frame, ultimo)
+    print("  [vision NO se estabilizo en el limite de intentos]")
+    return ultimo
+
+
+# Estado del detector de camara congelada (ver CONGELAMIENTO_* arriba) -
+# se guarda entre ciclos como atributos de la funcion en vez de variables
+# globales sueltas, para mantenerlo junto al codigo que lo usa.
+_evaluar_pieza_estable_ultimo_hsv = None
+_evaluar_pieza_estable_repeticiones = 0
+
+
+def evaluar_pieza_estable(cap, intentos_max=20, espera=0.2, tolerancia_color=10):
+    global _evaluar_pieza_estable_ultimo_hsv, _evaluar_pieza_estable_repeticiones
+
+    resultado = _evaluar_pieza_estable_interno(cap, intentos_max, espera, tolerancia_color)
+
+    if not resultado["hay_forma"]:
+        _evaluar_pieza_estable_ultimo_hsv = None
+        _evaluar_pieza_estable_repeticiones = 0
+        return resultado
+
+    hsv_actual = np.array(resultado["color_hsv"])
+    if _evaluar_pieza_estable_ultimo_hsv is not None:
+        diff = np.abs(hsv_actual - _evaluar_pieza_estable_ultimo_hsv)
+        if np.all(diff < CONGELAMIENTO_TOLERANCIA_HSV):
+            _evaluar_pieza_estable_repeticiones += 1
+        else:
+            _evaluar_pieza_estable_repeticiones = 0
+    _evaluar_pieza_estable_ultimo_hsv = hsv_actual
+
+    if _evaluar_pieza_estable_repeticiones >= CONGELAMIENTO_CICLOS_SEGUIDOS:
+        print(f"  [ALERTA] misma lectura de color repetida en "
+              f"{_evaluar_pieza_estable_repeticiones + 1} ciclos seguidos "
+              f"-- probable camara congelada, reabriendo...")
+        cap.release()
+        time.sleep(0.5)
+        cap.open('/dev/camara_dobot', cv2.CAP_V4L2)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+        tomar_foto(cap)  # primer frame de calentamiento, se descarta
+        _evaluar_pieza_estable_ultimo_hsv = None
+        _evaluar_pieza_estable_repeticiones = 0
+        resultado = _evaluar_pieza_estable_interno(cap, intentos_max, espera, tolerancia_color)
+        if resultado["hay_forma"]:
+            _evaluar_pieza_estable_ultimo_hsv = np.array(resultado["color_hsv"])
+
+    return resultado
+
+
 def pick_and_place(device, plc, cap):
     _t = datetime.now()
 
@@ -350,17 +482,15 @@ def pick_and_place(device, plc, cap):
         _t = ahora
 
     # Vision: se evalua con el brazo todavia en HOME, antes de moverse, para
-    # no estorbar la vista de la camara sobre la zona de PICK. Espera para
-    # que la pieza termine de asentarse antes de capturar - sin esto, el
-    # desenfoque por movimiento distorsiona el color medido (hallazgo
-    # 2026-10-06). Subido de 0.6s a 1.9s el 2026-10-08: con alimentacion
-    # manual (no la banda de Distributing) la pieza tarda hasta ~1.9s en
-    # llegar y asentarse en el punto de recogida, confirmado con fotos de
-    # diagnostico con marca de tiempo - con 0.6s la camara disparaba sobre
-    # el cuadro todavia vacio, dando falsos rechazos por "color fuera de
-    # rango" (media color de la maquinaria de fondo, no de la pieza).
-    time.sleep(1.9)
-    resultado_vision = evaluar_pieza_con_reintento(cap)
+    # no estorbar la vista de la camara sobre la zona de PICK. En vez de un
+    # tiempo fijo de espera (que fallaba de forma intermitente - a veces
+    # la pieza no habia llegado y se media el color de la maquinaria de
+    # fondo, dando rechazos falsos), se usa evaluar_pieza_estable(): la
+    # camara confirma sola cuando la pieza ya llego y esta quieta (dos
+    # lecturas seguidas con color casi identico), en vez de adivinar
+    # cuantos segundos hace falta esperar (hallazgo 2026-10-06 y
+    # 2026-10-08/09).
+    resultado_vision = evaluar_pieza_estable(cap)
     print(f"  [Vision] {resultado_vision}")
     marca("vision")
 
@@ -464,7 +594,16 @@ def main():
     # cada vez que se desconecta/reconecta la camara fisicamente. La regla
     # identifica la camara por su idVendor:idProduct (058f:3841) y por
     # ID_V4L_CAPABILITIES=capture (para evitar el nodo de metadata).
-    cap = cv2.VideoCapture('/dev/camara_dobot')
+    # Backend V4L2 explicito (no dejar que OpenCV elija GStreamer solo) y
+    # buffer interno de 1 frame - 2026-10-12: con el backend por defecto,
+    # si no se lee a un ritmo constante se acumulan frames viejos en una
+    # cola interna y salen de a poco en lecturas posteriores (sintoma
+    # confirmado: fotos de una pieza ya descartada hace varios ciclos
+    # reapareciendo en evaluaciones nuevas). CAP_PROP_BUFFERSIZE=1 hace
+    # que cada lectura descarte lo anterior y de siempre el frame mas
+    # reciente en vez de la cola completa.
+    cap = cv2.VideoCapture('/dev/camara_dobot', cv2.CAP_V4L2)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     # Resolucion reducida (de 1600x1200 a 800x600) para bajar la demanda de
     # ancho de banda/energia USB de la camara justo en el momento de la
     # captura - prueba 2026-10-07 para ver si alivia el pico de consumo que
