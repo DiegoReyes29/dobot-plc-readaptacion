@@ -106,6 +106,28 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 El `idVendor`/`idProduct` corresponde a la cámara del AI Camera Kit (Alcor Micro, Corp.) — para
 otra cámara, obtené los valores con `lsusb` o revisando `dmesg` tras conectarla.
 
+### Regla de udev para el Dobot (mismo problema, mismo fix)
+
+El mismo problema de la cámara aplica al Dobot: el PLC Siemens TIA Portal se referencia a sí mismo
+y es estable, pero `/dev/ttyACM0` puede pasar a ser `/dev/ttyACM1` según el orden en que Linux
+enumera los dispositivos USB tras un power-cycle — lo que deja `coordinador.service` en bucle de
+reintentos (`Restart=always` cada 5s) sin conectar nunca, sin ningún mensaje obvio para quien no
+tenga una computadora a mano para revisar el log. Mismo fix, symlink fijo por `idVendor:idProduct`:
+
+```bash
+# /etc/udev/rules.d/99-dobot-magician.rules
+SUBSYSTEM=="tty", ATTRS{idVendor}=="f055", ATTRS{idProduct}=="9800", SYMLINK+="dobot_magician"
+```
+
+```bash
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+El Dobot Magician Lite se presenta ante Linux como un puerto serial virtual MicroPython
+(`f055:9800`), no como un dispositivo "Dobot" con nombre propio — confirmado con `lsusb` con el
+Dobot conectado. `coordinador.py` usa `/dev/dobot_magician` como `DOBOT_PORT` en vez del índice
+numérico, igual que con la cámara.
+
 ### Servicio systemd (arranque automático y recuperación ante fallos)
 
 ```ini
