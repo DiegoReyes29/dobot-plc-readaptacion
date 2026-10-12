@@ -26,10 +26,16 @@ os.makedirs(FOTOS_DIR, exist_ok=True)
 PLC_IP = '192.168.10.31'
 RACK = 0
 SLOT = 2
-# OJO: verificar este puerto al reconectar - el 2026-10-06 cambio de
-# /dev/ttyACM0 a /dev/ttyACM1 tras un power-cycle del Dobot. Confirmar con
-# "ls /dev/ttyACM*" en el Pi antes de arrancar, y ajustar si hace falta.
-DOBOT_PORT = '/dev/ttyACM0'
+# 2026-10-12: antes era /dev/ttyACM0 hardcodeado, lo cual cambiaba a
+# /dev/ttyACM1 tras un power-cycle del Dobot segun el orden de enumeracion
+# USB, dejando el servicio en loop de reintentos sin conectar hasta que
+# alguien corrigiera el puerto a mano. Se uso el mismo mecanismo que ya
+# tenia la camara (symlink udev fijo por idVendor:idProduct, regla en
+# /etc/udev/rules.d/99-dobot-magician.rules, idVendor f055:idProduct 9800
+# - el Dobot Magician Lite se presenta como un puerto serial virtual
+# MicroPython) para que el puerto sea siempre el mismo sin importar el
+# orden de conexion.
+DOBOT_PORT = '/dev/dobot_magician'
 
 # Byte/bit de la senal de modo (M136.2 "Modo_Dobot"): se pone en verdadero
 # solo mientras dura un ciclo, y se vuelve a apagar en el finally pase lo
