@@ -123,11 +123,15 @@ cambio al programa del PLC.** Ese archivo se usa tal cual está en este reposito
 
 ## Red y cableado
 
+![Diagrama general de conexiones físicas](docs/diagrama_conexiones_fisicas.png)
+
 1. Conectar el Dobot a la Raspberry Pi con el cable USB incluido con el equipo.
 2. Conectar la cámara del AI Camera Kit a un puerto USB libre de la Raspberry Pi.
 3. Conectar la Raspberry Pi al puerto Ethernet/PROFINET del PLC mediante un cable de red directo
    (no se requiere ningún módulo de interfaz adicional entre ambos).
 4. Energizar la Raspberry Pi con una fuente adecuada (ver nota de alimentación arriba).
+5. Energizar el Dobot con su propio adaptador de alimentación (12 V), independiente de la
+   Raspberry Pi.
 
 ## Instalación
 
@@ -452,6 +456,7 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 │   └── leer_pose.py               <- utilidad de calibración (lee la pose del Dobot)
 └── docs/
     ├── diagrama_arquitectura.png
+    ├── diagrama_conexiones_fisicas.png
     ├── diagrama_flujo_coordinador.png
     ├── dobot_lite_manual.pdf       <- manual oficial del fabricante, Dobot Magician Lite
     ├── dobot_std_manual.pdf        <- manual oficial del fabricante, Dobot Magician estándar
