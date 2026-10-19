@@ -73,9 +73,12 @@ permanece sin cambios.
 **Este manual no reconstruye la lógica Ladder red por red** — las doce redes de `FC130` y las dos
 redes nuevas de `OB1`, ya programadas y con cada dirección documentada, están en
 [`docs/fc130/`](docs/fc130/) (capturas de TIA Portal) y explicadas con más detalle en el
-Capítulo 5 del informe de tesis. Para dejar el PLC funcionando: abrir el proyecto de TIA Portal
-de la celda, crear el bloque `FC130` (lenguaje KOP) y reproducir ahí las doce redes mostradas en
-esas capturas, agregar las dos redes nuevas en `OB1`, compilar y descargar al PLC.
+Capítulo 5 del informe de tesis. El proyecto completo de TIA Portal, con `FC130` y las dos redes
+de `OB1` ya incluidas, está comprimido en [`docs/Separating_LIVE.zip`](docs/Separating_LIVE.zip)
+— para dejar el PLC funcionando, basta con descomprimirlo, abrirlo en TIA Portal y descargarlo al
+PLC real. Si se prefiere reconstruirlo desde cero sobre otro proyecto base: crear el bloque
+`FC130` (lenguaje KOP) y reproducir ahí las doce redes mostradas en esas capturas, agregar las dos
+redes nuevas en `OB1`, compilar y descargar al PLC.
 
 **El resto de la integración — visión, decisión de aceptar/rechazar, movimiento del robot,
 calibración — vive enteramente en [`src/coordinador.py`](src/coordinador.py), sin ningún otro
@@ -85,7 +88,9 @@ cambio al programa del PLC.** Ese archivo se usa tal cual está en este reposito
 ## Requisitos de hardware
 
 - Dobot Magician Lite + AI Camera Kit (cámara USB 2.0 de 1 MP incluida, se monta sobre el
-  efector del brazo).
+  efector del brazo). Manuales oficiales del fabricante incluidos en
+  [`docs/dobot_lite_manual.pdf`](docs/dobot_lite_manual.pdf) y
+  [`docs/dobot_std_manual.pdf`](docs/dobot_std_manual.pdf).
 - Raspberry Pi (probado en Pi 3) con Raspberry Pi OS, tarjeta microSD (mínimo 8 GB), y una fuente
   de alimentación robusta — la Raspberry Pi 3 usada en este proyecto tiene un problema de
   alimentación conocido que se agrava con el consumo simultáneo del Dobot y la cámara por USB.
@@ -93,17 +98,18 @@ cambio al programa del PLC.** Ese archivo se usa tal cual está en este reposito
   comunicación Ethernet/PROFINET, en la misma red que la Pi, con el programa base de la celda
   Festo MPS "Separating" ya cargado.
 - Cable Ethernet (Pi ↔ PLC) y cable USB estándar (Pi ↔ Dobot).
-- Canasta y seis columnas de soporte impresas en 3D en PLA (archivos listos para imprimir en
-  [`docs/cad/`](docs/cad/): `canasta.stl` y `columna.stl`; las cotas completas están en el
-  Capítulo 5 del informe de tesis), con un mínimo de 3-4 perímetros sólidos y relleno de al menos
-  40 % en las zonas estructurales.
+- Canasta y seis columnas de soporte impresas en 3D en PETG (archivos listos para imprimir en
+  [`docs/cad/`](docs/cad/): `canasta.stl` y `columna.stl`; también está el editable
+  `canasta.f3d` de Fusion 360 — no hay un `.f3d` editable equivalente para la columna, solo el
+  `.stl` final; las cotas completas están en el Capítulo 5 del informe de tesis), con un mínimo
+  de 3-4 perímetros sólidos y relleno de al menos 40 % en las zonas estructurales.
 - Tornillería M5 (ocho tornillos para fijar las columnas a los rieles de la celda, más seis para
   fijar la canasta a las columnas).
 
 ## Montaje físico
 
 1. **Imprimir las piezas.** Una canasta (`docs/cad/canasta.stl`) y seis columnas
-   (`docs/cad/columna.stl` × 6), en PLA, con los parámetros de impresión indicados arriba.
+   (`docs/cad/columna.stl` × 6), en PETG, con los parámetros de impresión indicados arriba.
 2. **Fijar las columnas a los rieles de la celda.** Cada columna tiene una abrazadera en su
    extremo inferior que se atornilla al riel con dos tornillos M5. Van tres columnas por riel: una
    en cada esquina y una en el punto medio, para un total de seis.
@@ -447,8 +453,12 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 └── docs/
     ├── diagrama_arquitectura.png
     ├── diagrama_flujo_coordinador.png
+    ├── dobot_lite_manual.pdf       <- manual oficial del fabricante, Dobot Magician Lite
+    ├── dobot_std_manual.pdf        <- manual oficial del fabricante, Dobot Magician estándar
+    ├── Separating_LIVE.zip         <- proyecto completo de TIA Portal (con FC130 y OB1 ya incluidos)
     ├── cad/
     │   ├── canasta.stl             <- pieza imprimible en 3D
+    │   ├── canasta.f3d             <- editable, Fusion 360
     │   └── columna.stl             <- pieza imprimible en 3D (imprimir 6)
     └── fc130/
         ├── fc130_red1.png … fc130_red12.png   <- las doce redes del bloque FC130
