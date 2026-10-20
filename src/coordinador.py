@@ -78,8 +78,9 @@ DESPEGUE_DESCARTE = (DESCARTE[0], DESCARTE[1], WAYPOINT_3[2], DESCARTE[3])
 # con el brazo de Distributing presente en el encuadre (asi es siempre en
 # produccion real). Si se mueve la camara, cambia la pieza, o cambia la
 # iluminacion, hay que recalibrar todo esto con fotos nuevas - ver
-# metodologia en la memoria del proyecto (monitor_fotos_pick.py + medir
-# con el metodo de circulo, nunca con una caja de coordenadas fija).
+# "Calibracion de vision" en el README (monitor_fotos_pick.py para tomar
+# fotos nuevas + medir_color_foto.py para medirlas con el metodo de
+# circulo, nunca con una caja de coordenadas fija).
 RX, RY, RW, RH = 325, 300, 225, 200  # escalado x0.5 para resolucion 800x600 (ver main())
 # Lista de referencias (no una sola): el balance de blancos de la camara
 # cambia de una sesion a otra tras reiniciar la Pi (ej. 2026-10-06 vs

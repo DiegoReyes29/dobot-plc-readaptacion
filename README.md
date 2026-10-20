@@ -332,9 +332,18 @@ referencia.
 
 ### 4. Procedimiento para recalibrar
 
-1. Juntar fotos de piezas buenas y de cada tipo de defecto que se quiera detectar, sin tocar el
-   PLC ni el Dobot (por ejemplo, guardando una copia de las fotos que `coordinador.py` ya
-   almacena en `~/fotos_evaluadas` durante la operación normal).
+1. Juntar fotos de piezas buenas y de cada tipo de defecto que se quiera detectar. Para un
+   defecto que ya pasó por producción real, basta con copiar las fotos que `coordinador.py` ya
+   almacena en `~/fotos_evaluadas` durante la operación normal. Para un defecto nuevo que
+   todavía no se probó, `src/monitor_fotos_pick.py` permite tomar fotos sueltas sin correr el
+   ciclo completo (no necesita el Dobot, solo el PLC y la cámara): se conecta al PLC, vigila el
+   sensor `Part_AV` (I0.0), y guarda una foto cada vez que detecta una pieza nueva en el punto de
+   recogida.
+   ```bash
+   python3 src/monitor_fotos_pick.py
+   ```
+   Pone cada pieza (buena o con el defecto a probar) a mano en el punto de PICK mientras el
+   script corre; las fotos quedan en `~/fotos_pick/`.
 2. Medir el color de cada una con el mismo método de detección por círculo + máscara anular que
    usa `evaluar_pieza()` en `src/coordinador.py` (nunca a mano con una caja fija). El script
    `src/medir_color_foto.py` hace exactamente esto sin tocar el PLC, el Dobot ni la cámara:
@@ -461,6 +470,7 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 ├── src/
 │   ├── coordinador.py             <- script principal, corre como servicio en la Raspberry Pi
 │   ├── leer_pose.py               <- utilidad de calibración (lee la pose del Dobot)
+│   ├── monitor_fotos_pick.py      <- utilidad de calibración (toma fotos nuevas desde la cámara)
 │   └── medir_color_foto.py        <- utilidad de calibración (mide HSV de fotos ya guardadas)
 └── docs/
     ├── diagrama_arquitectura.png
