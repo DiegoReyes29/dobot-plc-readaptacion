@@ -336,7 +336,14 @@ referencia.
    PLC ni el Dobot (por ejemplo, guardando una copia de las fotos que `coordinador.py` ya
    almacena en `~/fotos_evaluadas` durante la operación normal).
 2. Medir el color de cada una con el mismo método de detección por círculo + máscara anular que
-   usa `evaluar_pieza()` en `src/coordinador.py` (nunca a mano con una caja fija).
+   usa `evaluar_pieza()` en `src/coordinador.py` (nunca a mano con una caja fija). El script
+   `src/medir_color_foto.py` hace exactamente esto sin tocar el PLC, el Dobot ni la cámara:
+   ```bash
+   python3 src/medir_color_foto.py --dir ~/fotos_evaluadas
+   ```
+   Imprime, por cada foto, el HSV detectado, la diferencia contra la referencia más cercana, el
+   porcentaje de píxeles azules dentro del aro, y si la aprobaría o rechazaría con la calibración
+   actual.
 3. Si las piezas buenas caen en un color distinto a las referencias existentes, **agregar** una
    referencia nueva a la lista (no reemplazar las anteriores — pueden seguir siendo válidas bajo
    otra luz).
@@ -453,7 +460,8 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 ├── README.md                      <- este archivo
 ├── src/
 │   ├── coordinador.py             <- script principal, corre como servicio en la Raspberry Pi
-│   └── leer_pose.py               <- utilidad de calibración (lee la pose del Dobot)
+│   ├── leer_pose.py               <- utilidad de calibración (lee la pose del Dobot)
+│   └── medir_color_foto.py        <- utilidad de calibración (mide HSV de fotos ya guardadas)
 └── docs/
     ├── diagrama_arquitectura.png
     ├── diagrama_conexiones_fisicas.png
