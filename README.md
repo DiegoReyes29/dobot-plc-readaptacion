@@ -475,7 +475,8 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 └── docs/
     ├── diagrama_arquitectura.png
     ├── diagrama_conexiones_fisicas.png
-    ├── diagrama_flujo_coordinador.png
+    ├── diagrama_flujo_coordinador_1.png
+    ├── diagrama_flujo_coordinador_2.png
     ├── dobot_lite_manual.pdf       <- manual oficial del fabricante, Dobot Magician Lite
     ├── dobot_std_manual.pdf        <- manual oficial del fabricante, Dobot Magician estándar
     ├── Separating_LIVE.zip         <- proyecto completo de TIA Portal (con FC130 y OB1 ya incluidos)
