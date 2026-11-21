@@ -454,10 +454,17 @@ insertados a propósito):
 
 | | Eléctrico y neumático | Dobot + visión |
 |---|---|---|
-| **Calidad** (detección de defectos) | 10 % | 100 % |
-| **Rendimiento** (throughput real, eléctrico y neumático = base) | 100 % | 72.6 % |
-| **Disponibilidad** | 100 % | 100 % |
-| **OEE** | **10 %** | **72.6 %** |
+| **Disponibilidad** | 95.6 % | 100 % |
+| **Rendimiento relativo** (throughput real, eléctrico y neumático = base) | 100 % | 72.6 % |
+| **Calidad** (piezas buenas entregadas / piezas totales) | 84.7 % | 100 % |
+| **OEE** | **81.0 %** | **72.6 %** |
+
+El sistema eléctrico y neumático detectó correctamente solo 1 de las 10 piezas defectuosas de
+prueba, frente a las 10 de 10 detectadas por el Dobot con visión — una ventaja de Calidad clara,
+pero que no bastó para compensar la diferencia de Rendimiento (el mecanismo neumático opera de
+forma continua, mientras el Dobot atiende cada tarea de forma serializada). Un análisis de
+sensibilidad muestra que el resultado se revierte a favor del Dobot a partir de 16-17 piezas
+defectuosas insertadas (frente a las 10 usadas en esta prueba).
 
 Ver el informe de tesis completo para la metodología detallada, las corridas individuales, y el
 análisis de por qué el mecanismo neumático no detecta este tipo de defecto mientras la visión sí.
