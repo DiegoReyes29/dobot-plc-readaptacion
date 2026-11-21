@@ -8,7 +8,8 @@ propietario. El sistema agrega inspección de calidad por visión artificial que
 neumático original no tenía, **sin modificar el programa de control certificado del PLC más
 allá de un único bloque de interlock mínimo y acotado (`FC130`)**.
 
-Proyecto de graduación (TFG), Tecnológico de Costa Rica, Sede San Carlos.
+Proyecto de graduación (TFG), Tecnológico de Costa Rica, Sede San Carlos. El informe completo
+está incluido en este repositorio: [`docs/TFG_LuisDiegoReyes.pdf`](docs/TFG_LuisDiegoReyes.pdf).
 
 Este manual está escrito para que alguien que **nunca ha usado ninguno de estos equipos** (PLC,
 Dobot, Raspberry Pi) pueda tanto replicar el montaje desde cero como operarlo y mantenerlo
@@ -16,7 +17,8 @@ después, sin que el autor original esté presente. No reexplica el código ni l
 paso a paso — esos ya están escritos y documentados; este manual dice qué cargar, dónde, en qué
 orden, y qué hacer si algo deja de funcionar (ver especialmente [Operación
 diaria](#operación-diaria) y [Mañas](#mañas-troubleshooting-operativo)). Para el diseño y el
-razonamiento detrás de cada decisión, ver el informe de tesis completo (Capítulos 5 y 6).
+razonamiento detrás de cada decisión, ver el [informe de tesis completo](docs/TFG_LuisDiegoReyes.pdf)
+(Capítulos 5 y 6).
 
 ## Por qué este enfoque
 
@@ -418,7 +420,7 @@ para revisar después por qué el sistema rechazó o aprobó una pieza en partic
 | Se necesita volver al mecanismo neumático original | — | Forzar `Modo_Dobot` a falso desde TIA Portal, o simplemente detener `coordinador.service`: el interlock libera la estación automáticamente por el watchdog de 30 s si la Pi deja de responder |
 
 Para cualquier problema que no esté en esta tabla, la sección [Mañas](#mañas-troubleshooting-operativo)
-cubre los casos conocidos con más detalle, y el informe de tesis completo (Capítulos 5 y 6)
+cubre los casos conocidos con más detalle, y el [informe de tesis completo](docs/TFG_LuisDiegoReyes.pdf) (Capítulos 5 y 6)
 documenta el diseño completo del sistema para diagnósticos más a fondo.
 
 ## Mañas (troubleshooting operativo)
@@ -466,8 +468,9 @@ forma continua, mientras el Dobot atiende cada tarea de forma serializada). Un a
 sensibilidad muestra que el resultado se revierte a favor del Dobot a partir de 16-17 piezas
 defectuosas insertadas (frente a las 10 usadas en esta prueba).
 
-Ver el informe de tesis completo para la metodología detallada, las corridas individuales, y el
-análisis de por qué el mecanismo neumático no detecta este tipo de defecto mientras la visión sí.
+Ver el [informe de tesis completo](docs/TFG_LuisDiegoReyes.pdf) para la metodología detallada,
+las corridas individuales, y el análisis de por qué el mecanismo neumático no detecta este tipo
+de defecto mientras la visión sí.
 
 ## Estructura del repositorio
 
@@ -480,6 +483,7 @@ análisis de por qué el mecanismo neumático no detecta este tipo de defecto mi
 │   ├── monitor_fotos_pick.py      <- utilidad de calibración (toma fotos nuevas desde la cámara)
 │   └── medir_color_foto.py        <- utilidad de calibración (mide HSV de fotos ya guardadas)
 └── docs/
+    ├── TFG_LuisDiegoReyes.pdf      <- informe de tesis completo
     ├── diagrama_arquitectura.png
     ├── diagrama_conexiones_fisicas.png
     ├── diagrama_flujo_coordinador_1.png
